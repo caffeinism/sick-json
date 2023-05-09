@@ -1,10 +1,55 @@
-# A simple tool to parse the non-normal JSON
+# A simple tool to parse the abnormal JSON
 
 The only function implemented in this module is `parse`.
 
 `parse` is similar to json.loads. However, it corrects some mistakes that LLM can make.
 
 It can be installed with `pip install sick-json` and used with `import sick_json;sick_json.parse(something)`.
+
+### TL;DR
+This module interpret
+```json5
+some description here..
+[{
+    "name": "Kim", // required
+    'age': 13, /* optional */
+},
+{
+    name: "Lee",
+    age: "\14", 
+]
+```
+to
+```json
+[{"name": "Kim", "age": 13}, {"name": "Lee", "age": "14"}]
+```
+
+It can also be validated/calibrated via pydantic.
+```python
+import sick_json
+from pydantic import BaseModel
+
+class Student(BaseModel):
+    name: str
+    age: int
+    
+sick_json.parse(r"""
+some description here..
+[{
+    "name": "Kim", // required
+    'age': 13, /* optional */
+},
+{
+    name: "Lee",
+    age: "\14", 
+]
+""", pydantic_model=list[Student])
+```
+```
+[{'name': 'Kim', 'age': 13}, {'name': 'Lee', 'age': 14}]
+```
+
+### Case by Case
 
 By default, it uses a JSON5 parser, which solves the following problems.
 
@@ -27,7 +72,7 @@ By default, it uses a JSON5 parser, which solves the following problems.
 }
 ```
 
-Additionally, it heuristically solves a few problems.
+The JSON5x parser, a slight variation of the JSON5 parser, parses the following syntax.
 
 - Allow "True" and "False"
 ```json5
@@ -36,6 +81,20 @@ Additionally, it heuristically solves a few problems.
     "is_good_guy": True
 }
 ```
+- Unclosed brackets
+```json5
+{"name": "Kim",
+```
+```json5
+[[{"some":{"name": "Kim"], "thing"]
+```
+- Ignore invalid escape sequence
+```json5
+{"name": "Kim", "age": "\18"}
+```
+
+Additionally, it heuristically solves a few problems.
+
 - Verbose before and after JSON
 ```json5
 blah blah blah
