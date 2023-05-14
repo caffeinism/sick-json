@@ -2,10 +2,10 @@ import json
 import logging
 import re
 
-import pyjson5
+import pyjson5x
 
 re_extra_data_message = re.compile(r"^Extra data .+? near (\d+)$")
-re_illegal_character = re.compile(r"^Expected .+? near (\d+), found .+?$")
+re_error_position = re.compile(r"near (\d+)")
 re_open_brace = re.compile(r"[\[{]")
 
 
@@ -19,9 +19,9 @@ def parse(maybe_json, pydantic_model=None):
         index = index.span()[0]
         maybe_json = maybe_json[index:]
         try:
-            json_objects.append(pyjson5.decode(maybe_json))
+            json_objects.append(pyjson5x.decode(maybe_json))
             break
-        except pyjson5.Json5ExtraData as e:
+        except pyjson5x.Json5ExtraData as e:
             logging.debug(
                 "There are other strings that are not JSON."
                 " Re-explore for the trailing string."
@@ -29,20 +29,13 @@ def parse(maybe_json, pydantic_model=None):
             match = re_extra_data_message.fullmatch(e.message)
             json_objects.append(e.result)
             maybe_json = maybe_json[int(match.group(1)) :]
-        except pyjson5.Json5IllegalCharacter as e:
+        except pyjson5x.Json5DecoderException as e:
             logging.debug(
-                "Invalid string. If True or Flase, correct it."
+                f"JSON parse failed. {e.message}"
             )
-            match = re_illegal_character.fullmatch(e.message)
-            index = int(match.group(1)) - 1
-            if maybe_json[index : index + 4] == "True":
-                maybe_json = f"{maybe_json[:index]}t{maybe_json[index + 1 :]}"
-            elif maybe_json[index : index + 5] == "False":
-                maybe_json = f"{maybe_json[:index]}f{maybe_json[index + 1 :]}"
-            else:
-                maybe_json = maybe_json[index:]
-        except Exception as e:
-            maybe_json = maybe_json[index+1:]
+            match = re_error_position.search(e.message)
+            index = int(match.group(1))
+            maybe_json = maybe_json[index:]
 
     if not json_objects:
         raise JsonNotFound

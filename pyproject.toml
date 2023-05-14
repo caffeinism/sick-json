@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sick-json"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
     {name="Kim Minjong", email="make.dirty.code@gmail.com"},
 ]
 description = "A simple tool to parse the non-normal JSON that LLM responds to."
 readme = "README.md"
 requires-python = ">=3.5"
-dependencies = ["pyjson5"]
+dependencies = ["pyjson5x"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
